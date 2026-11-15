@@ -5,6 +5,7 @@ Input is the column `nat`, references are the columns `pk1` and `pk2`.
 
 Usage:
     python eval/run_eval.py MODEL      run one model; resumes from eval/results/<model>.jsonl
+    python eval/run_eval.py MODEL --no-system   send no system prompt (model with a built-in one)
     python eval/run_eval.py --summary  write summary.json, summary.md and summary.png
 """
 
@@ -73,17 +74,20 @@ def ollama_post(path, body):
         return json.load(resp)
 
 
-def run(model):
-    path = result_path(model)
+def run(model, system=rw.SYSTEM, name=None, ollama=True):
+    """name labels the result file and the summary row; ollama=False skips loading and unloading."""
+    name = name or model
+    path = result_path(name)
     done = set()
     if path.exists():
         done = {json.loads(line)["id"] for line in path.read_text(encoding="utf-8").splitlines() if line.strip()}
     todo = [it for it in items() if it["id"] not in done]
-    print(f"{model}: {len(done)} done, {len(todo)} to do", flush=True)
+    print(f"{name}: {len(done)} done, {len(todo)} to do", flush=True)
     if not todo:
         return 0
-    ollama_post("/api/chat", {"model": model, "messages": [{"role": "user", "content": "OK"}], "stream": False,
-                              "think": False, "options": {"num_predict": 1}})   # load the model before timing
+    if ollama:
+        ollama_post("/api/chat", {"model": model, "messages": [{"role": "user", "content": "OK"}], "stream": False,
+                                  "think": False, "options": {"num_predict": 1}})   # load the model before timing
     RESULTS.mkdir(parents=True, exist_ok=True)
     with open(path, "a", encoding="utf-8") as out:
         for it in todo:
@@ -92,13 +96,14 @@ def run(model):
                 print(f"PAUSED: MemAvailable {free:.1f} GiB < {MIN_FREE_GIB} GiB", flush=True)
                 return 3
             t0 = time.perf_counter()
-            res = rw.rewrite(it["nat"], model)
+            res = rw.rewrite(it["nat"], model, system=system)
             sec = time.perf_counter() - t0
-            out.write(json.dumps({"id": it["id"], "model": model, "nat": it["nat"], "seconds": round(sec, 2), **res},
+            out.write(json.dumps({"id": it["id"], "model": name, "nat": it["nat"], "seconds": round(sec, 2), **res},
                                  ensure_ascii=False) + "\n")
             out.flush()
             print(f"{it['id']}: ok={res['ok']} rounds={res['rounds']} {sec:.1f} s free={free:.1f} GiB", flush=True)
-    ollama_post("/api/generate", {"model": model, "keep_alive": 0})   # unload: 1 model in RAM at a time
+    if ollama:
+        ollama_post("/api/generate", {"model": model, "keep_alive": 0})   # unload: 1 model in RAM at a time
     return 0
 
 
@@ -194,5 +199,7 @@ if __name__ == "__main__":
         summarize()
     elif len(sys.argv) == 2:
         sys.exit(run(sys.argv[1]))
+    elif len(sys.argv) == 3 and sys.argv[2] == "--no-system":
+        sys.exit(run(sys.argv[1], system=None))
     else:
         sys.exit(__doc__)

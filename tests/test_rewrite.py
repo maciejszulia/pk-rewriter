@@ -49,6 +49,13 @@ class Loop(unittest.TestCase):
             self.assertIn(part, repair)
         self.assertEqual([m["role"] for m in calls[1]], ["system", "user", "assistant", "user"])
 
+    def test_no_system_message_for_a_model_with_a_built_in_prompt(self):
+        chat, calls = fake_chat(DIRTY, CLEAN)
+        with mock.patch.object(rw, "chat", chat):
+            rw.rewrite("Kopie bazy kasujemy po 30 dniach.", "pk-qwen", system=None)
+        self.assertEqual([m["role"] for m in calls[0]], ["user"])
+        self.assertEqual([m["role"] for m in calls[1]], ["user", "assistant", "user"])
+
     def test_at_most_3_calls(self):
         chat, calls = fake_chat(DIRTY, DIRTY, DIRTY, CLEAN)
         with mock.patch.object(rw, "chat", chat):

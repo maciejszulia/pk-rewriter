@@ -119,14 +119,16 @@ def problems(rnd):
     return len(rnd["violations"]) + len(rnd["missing_numbers"]) + (0 if rnd["text"] else 1)
 
 
-def rewrite(text, model, rounds=MAX_ROUNDS):
+def rewrite(text, model, rounds=MAX_ROUNDS, system=SYSTEM):
     """Generate, check, repair. Returns {text, ok, rounds, history}.
 
     text is the round with the fewest problems (the earliest on a tie); ok is True when that round
-    has no pklint hit, no missing number and is not empty.
+    has no pklint hit, no missing number and is not empty. system=None sends no system message, for a
+    model with a built-in system prompt.
     """
     rounds = max(1, min(rounds, MAX_ROUNDS))
-    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": text}]
+    base = ([{"role": "system", "content": system}] if system else []) + [{"role": "user", "content": text}]
+    messages = base
     history = []
     for _ in range(rounds):
         resp = chat(model, messages)
@@ -137,7 +139,7 @@ def rewrite(text, model, rounds=MAX_ROUNDS):
                         "eval_seconds": resp.get("eval_duration", 0) / 1e9})
         if not problems(history[-1]):
             break
-        messages = messages[:2] + [{"role": "assistant", "content": out},
-                                   {"role": "user", "content": repair_prompt(found, missing, not out)}]
+        messages = base + [{"role": "assistant", "content": out},
+                           {"role": "user", "content": repair_prompt(found, missing, not out)}]
     best = min(history, key=problems)
     return {"text": best["text"], "ok": problems(best) == 0, "rounds": len(history), "history": history}
