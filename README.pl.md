@@ -35,6 +35,8 @@ Projekt mierzy, jak model językowy na laptopie Lenovo ThinkPad T470p przepisuje
 
 ![Wykres: odsetek tekstów z 0 naruszeń dla każdego modelu](eval/results/summary.png)
 
+Skrypt `eval/run_eval.py` zapisał wyniki 2026-11-15 w pliku `eval/results/summary.json`. Sekcja „Maszyna” opisuje laptop, na którym biegł pomiar.
+
 Zbiór testowy zawiera 44 teksty z pliku `data/items.csv` repozytorium PK, commit `e5c9248`. Każdy tekst ma 2 wzorce. Miara chrF używa wzorca, który daje wyższy wynik. Wiersz „tekst źródłowy bez modelu” podaje wynik tekstu przed przepisaniem. Pliki `eval/results/*.jsonl` zawierają odpowiedź modelu z każdej rundy.
 
 Wnioski z pomiaru:
@@ -57,12 +59,17 @@ Program Ollama w wersji 0.34.1 uruchomił każdy model na procesorze Intel Core 
 
 Wykonaj każdy krok w tej kolejności:
 
-1. Zainstaluj program Ollama. Pobierz model poleceniem `ollama pull qwen3.5:4b`.
-2. Utwórz środowisko Pythona w wersji 3.12 poleceniem `uv venv --python 3.12 .venv`.
-3. Zainstaluj pakiet poleceniem `uv pip install -e ".[test,eval]"`.
-4. Uruchom serwer poleceniem `.venv/bin/uvicorn pk_rewriter.api:app --port 8000`. Wynik: strona działa pod adresem `http://127.0.0.1:8000`.
+1. Sklonuj repozytorium poleceniem `git clone https://github.com/maciejszulia/pk-rewriter`. Przejdź do katalogu `pk-rewriter`.
+2. Zainstaluj program Ollama. Pobierz model poleceniem `ollama pull qwen3.5:4b`.
+3. Utwórz środowisko Pythona w wersji 3.12 poleceniem `uv venv --python 3.12 .venv`.
+4. Zainstaluj pakiet poleceniem `uv pip install -e ".[test,eval]"`.
+5. Uruchom serwer poleceniem `.venv/bin/uvicorn pk_rewriter.api:app --port 8000`. Wynik: strona działa pod adresem `http://127.0.0.1:8000`.
 
 Polecenie `.venv/bin/python -m unittest discover -s tests -v` uruchamia testy bez sieci. Atrapa zastępuje model w każdym teście. Polecenie `.venv/bin/python eval/run_eval.py qwen3.5:4b` uruchamia ewaluację modelu. Skrypt wznawia przerwany bieg z pliku wyników.
+
+## Serwer MCP
+
+Moduł `pk_rewriter/mcp_server.py` udostępnia klientom protokołu MCP 3 narzędzia: `pk_lint`, `pk_rewrite` oraz `pk_rule`. Narzędzie `pk_lint` zwraca naruszenia tekstu. Narzędzie `pk_rewrite` przepisuje tekst w pętli. Narzędzie `pk_rule` zwraca regułę PK dla kodu lintera. Klient uruchamia serwer poleceniem `.venv/bin/python -m pk_rewriter.mcp_server`. Tekst MUSI mieć od 1 do 2000 znaków włącznie.
 
 ## Uruchomienie w Dockerze
 
@@ -93,6 +100,6 @@ Workflow `image.yml` publikuje obraz `ghcr.io/maciejszulia/pk-rewriter` dla każ
 - Ewaluacja ma 44 teksty, 1 ziarno losowania oraz 1 bieg dla każdego modelu. Zmiana wyniku o 1 tekst zmienia odsetek o 2,3 punktu procentowego.
 - Laptop uruchamiał inne programy w czasie ewaluacji. Plik [docs/hardware.md](docs/hardware.md) podaje obciążenie procesora.
 
-## Licencja
+## Licencja i autor
 
 Licencja MIT, plik [LICENSE](LICENSE). Pliki `pk_rewriter/pklint.py` oraz `data/items.csv` pochodzą z repozytorium [polszczyzna-kontrolowana](https://github.com/maciejszulia/polszczyzna-kontrolowana), commit `e5c9248`. Oba repozytoria mają 1 autora: Maciej Szulia.
