@@ -15,6 +15,8 @@ from . import pklint
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 OPTIONS = {"temperature": 0.7, "top_p": 0.8, "top_k": 20, "seed": 42, "num_ctx": 4096, "num_predict": 1024}
 MAX_ROUNDS = 3
+MAX_CHARS = 2000
+MODELS = [m.strip() for m in os.environ.get("PK_MODELS", "qwen3.5:4b,qwen3.5:2b,qwen3.5:0.8b").split(",") if m.strip()]
 MARKER = "[DO USTALENIA"
 
 SYSTEM = """Przepisz polski tekst na Polszczyznę Kontrolowaną (PK). Każde zdanie w PK ma dokładnie 1 znaczenie.

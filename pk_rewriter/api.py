@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import urllib.request
 from pathlib import Path
 from typing import Annotated
@@ -13,9 +12,9 @@ from pydantic import BaseModel, Field, StringConstraints, field_validator
 
 from . import pklint, rewrite
 
-MODELS = [m.strip() for m in os.environ.get("PK_MODELS", "qwen3.5:4b,qwen3.5:2b,qwen3.5:0.8b").split(",") if m.strip()]
+MODELS = rewrite.MODELS
 INDEX = Path(__file__).resolve().parent.parent / "web" / "index.html"
-Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=2000)]
+Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=rewrite.MAX_CHARS)]
 
 app = FastAPI(title="pk-rewriter")
 
