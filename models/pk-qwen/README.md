@@ -45,7 +45,14 @@ python eval/run_eval.py pk-qwen --no-system     # the loop sends no system promp
 
 ## Evaluation
 
-Pending: `python eval/run_eval.py pk-qwen --no-system` runs after the LoRA experiment; the result goes to `eval/results/pk-qwen.jsonl` and to the summary.
+`python eval/run_eval.py pk-qwen --no-system` on 2026-11-15 from 18:32:10 to 19:05:57; the loop sent no system prompt, so the model used its built-in one. Source: `eval/results/pk-qwen.jsonl`, `eval/results/summary.json`.
+
+| Model | 0 violations after call 1 (%) | M (%) | Mean rounds | chrF after call 1 | chrF after loop | Seconds per text | Tokens per second |
+|---|---|---|---|---|---|---|---|
+| pk-qwen (built-in prompt) | 81.8 | 93.2 | 1.27 | 39.39 | 39.58 | 45.01 | 5.0 |
+| qwen3.5:4b (prompt sent by the client) | 77.3 | 93.2 | 1.34 | 41.55 | 42.24 | 44.4 | 5.1 |
+
+Both runs send prompts of the same length (for example 621 tokens for the first test text), so the packaging keeps the prompt. The answers still differ between the 2 runs: Ollama on this CPU returned other samples for the same prompt and `seed` 42. The differences in the table are therefore run-to-run variation: 81.8 % against 77.3 % after call 1 is 2 texts of 44.
 
 ## Limits
 

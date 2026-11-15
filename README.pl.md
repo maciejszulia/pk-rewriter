@@ -32,6 +32,9 @@ Projekt mierzy, jak model językowy na laptopie Lenovo ThinkPad T470p przepisuje
 | qwen3.5:0.8b | 44 | 36,4 | 50,0 | 2,16 | 29,86 | 30,64 | 27,66 | 7,3 |
 | qwen3.5:2b | 44 | 22,7 | 43,2 | 2,36 | 37,60 | 38,87 | 46,16 | 7,6 |
 | qwen3.5:4b | 44 | 77,3 | 93,2 | 1,34 | 41,55 | 42,24 | 44,40 | 5,1 |
+| pk-qwen | 44 | 81,8 | 93,2 | 1,27 | 39,39 | 39,58 | 45,01 | 5,0 |
+| qwen3.5-0.8b-hf-short | 44 | 40,9 | 52,3 | 2,09 | 51,13 | 50,44 | 14,73 | 3,5 |
+| pk-lora-0.8b | 44 | 77,3 | 84,1 | 1,39 | 42,27 | 41,96 | 9,90 | 3,4 |
 
 ![Wykres: odsetek tekstów z 0 naruszeń dla każdego modelu](eval/results/summary.png)
 
@@ -50,6 +53,17 @@ Wnioski z pomiaru:
   - Tekst „Wymień filtr.” zmienił się w tekst „Wykonaj filtrowanie obiektu F1.”. Wynik nazywa inną czynność.
 - Model qwen3.5:4b wstawił znacznik w 1 wyniku z 44. Zasada 1 standardu PK zakazuje zgadywania faktów. Linter nie wykrywa zgadywania.
 - Model qwen3.5:0.8b przechodzi kontrolę lintera częściowo tekstem bez związku z tekstem źródłowym. Miara chrF modelu qwen3.5:0.8b wynosi 30,64 po pętli.
+
+## Modele
+
+Wyszukiwanie w serwisie Hugging Face nie znalazło polskiego modelu dla języka kontrolowanego. Wyszukiwanie nie znalazło także polskiego zbioru danych do upraszczania tekstu. Plik [docs/research-huggingface.md](docs/research-huggingface.md) opisuje wyszukiwanie z 2026-11-15. Projekt zawiera 2 modele:
+
+- Model `pk-qwen` to model qwen3.5:4b z promptem PK oraz parametrami w pliku `models/pk-qwen/Modelfile`. Klient wysyła do modelu `pk-qwen` tylko tekst. Model `pk-qwen` ma 0 naruszeń w 93,2 % tekstów po pętli.
+- Model `pk-lora` to adapter LoRA dla modelu Qwen3.5-0.8B. Model qwen3.5:4b przepisał 96 zdań z 5 aktów prawnych. Linter `pklint` przyjął 74 wyniki. Filtry zostawiły 47 par. Trening na procesorze laptopa trwał 13,2 min.
+- Z adapterem `pk-lora` model Qwen3.5-0.8B ma 0 naruszeń w 84,1 % tekstów po pętli. Bez adaptera model Qwen3.5-0.8B ma 0 naruszeń w 52,3 % tekstów po pętli. Model bez adaptera kopiuje tekst źródłowy w 24 odpowiedziach z 44.
+- Program Ollama w wersji 0.34.1 odrzuca adapter LoRA. Biblioteka `transformers` uruchamia model `pk-lora`.
+
+Karty modeli: [models/pk-qwen/README.md](models/pk-qwen/README.md), [models/pk-lora/README.md](models/pk-lora/README.md).
 
 ## Maszyna
 

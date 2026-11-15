@@ -91,7 +91,7 @@ Same 44 test texts, same loop, same metrics as `eval/run_eval.py`; both rows run
 - The training set is small (47 pairs), comes from 1 register (legal acts) and from 1 teacher model. There is no validation split; a loss of 0.23 after 3 epochs on 47 pairs suggests memorisation, and only the 44 test texts measure generalisation.
 - `transformers` sampling differs from Ollama sampling (no `presence_penalty`, float32 instead of Q8_0), so compare the adapter with the base model of the same backend.
 - The adapter learned answers that echo the repair prompt in rare cases (test text A5c: the answer repeats the rule sentence of A5), and answers that change the meaning, like its teacher.
-- Ollama 0.34.1 has no `ADAPTER` instruction in its Modelfile reference, so the adapter runs through `transformers` only; importing merged Qwen3.5 Safetensors into Ollama was not tried.
+- Ollama 0.34.1 refuses the adapter: `ollama create` with `FROM qwen3.5:0.8b` and `ADAPTER` ends with `Error: LoRA adapters are no longer supported` (tried 2026-11-15). The adapter therefore runs through `transformers` only. Merging the adapter into the base and importing the merged Safetensors into Ollama was not tried.
 
 ## License
 

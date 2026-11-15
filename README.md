@@ -24,6 +24,9 @@ Measured on 2026-11-15 on the laptop described in [Machine](#machine); source: `
 | qwen3.5:0.8b | 44 | 36.4 | 50.0 | 2.16 | 29.86 | 30.64 | 27.66 | 7.3 |
 | qwen3.5:2b | 44 | 22.7 | 43.2 | 2.36 | 37.6 | 38.87 | 46.16 | 7.6 |
 | qwen3.5:4b | 44 | 77.3 | 93.2 | 1.34 | 41.55 | 42.24 | 44.4 | 5.1 |
+| pk-qwen | 44 | 81.8 | 93.2 | 1.27 | 39.39 | 39.58 | 45.01 | 5.0 |
+| qwen3.5-0.8b-hf-short | 44 | 40.9 | 52.3 | 2.09 | 51.13 | 50.44 | 14.73 | 3.5 |
+| pk-lora-0.8b | 44 | 77.3 | 84.1 | 1.39 | 42.27 | 41.96 | 9.9 | 3.4 |
 
 ![Bar chart of texts with 0 violations per model](eval/results/summary.png)
 
@@ -31,7 +34,7 @@ Test set: the 44 texts of `data/items.csv` from the PK repository (commit `e5c92
 
 $$\mathrm{chrF}_\beta = 100 \cdot \frac{(1+\beta^2)\,\bar P\,\bar R}{\beta^2\,\bar P + \bar R}$$
 
-where $\bar P$ and $\bar R$ are the precision and the recall of character n-grams, averaged over the orders 1 to 6. The first row scores the source text without any model. Raw answers of every round: `eval/results/<model>.jsonl`.
+where $\bar P$ and $\bar R$ are the precision and the recall of character n-grams, averaged over the orders 1 to 6. The first row scores the source text without any model. The rows `pk-qwen`, `qwen3.5-0.8b-hf-short` and `pk-lora-0.8b` belong to the [Models](#models) section; the last 2 run through `transformers` with a 26-token prompt. Raw answers of every round: `eval/results/<model>.jsonl`.
 
 What the numbers say:
 
@@ -59,13 +62,18 @@ A search of the Hugging Face Hub found no Polish controlled-language model and n
 
 | Model | Base | Method | Size | M (%) | chrF after loop | Tokens per second |
 |---|---|---|---|---|---|---|
-| pk-qwen | qwen3.5:4b (Q4_K_M) | Ollama `Modelfile`: PK prompt and parameters built in | 3.3 GB | pending | pending | pending |
-| pk-lora | Qwen3.5-0.8B (float32, `transformers`) | LoRA on the CPU, data by rejection sampling with pklint | pending | pending | pending | pending |
+| pk-qwen | qwen3.5:4b (Q4_K_M, Ollama) | `Modelfile` with the PK prompt and the parameters built in | 3.3 GB (shares the weights of qwen3.5:4b) | 93.2 | 39.58 | 5.0 |
+| pk-lora | Qwen3.5-0.8B (float32, `transformers`) | LoRA rank 16 trained on the CPU on 47 pairs from rejection sampling with pklint | adapter 40.9 MB on a 1.75 GB base | 84.1 | 41.96 | 3.4 |
+| Qwen3.5-0.8B without adapter (baseline of pk-lora) | Qwen3.5-0.8B (float32, `transformers`) | same 26-token prompt | 1.75 GB | 52.3 | 50.44 | 3.5 |
 
 - **pk-qwen** packs the best size (qwen3.5:4b) with the PK prompt and the sampling parameters into 1 Ollama model: `ollama create pk-qwen -f models/pk-qwen/Modelfile`, then `ollama run pk-qwen "<text>"`. Card: [models/pk-qwen/README.md](models/pk-qwen/README.md).
 - **pk-lora** is a LoRA adapter for Qwen3.5-0.8B, trained on the laptop CPU by rejection sampling: qwen3.5:4b rewrote sentences of 5 Polish legal acts, pklint and the number check kept the clean rewrites, and the adapter learned them with a 26-token prompt instead of the 586-token one. Card: [models/pk-lora/README.md](models/pk-lora/README.md).
 
-The measurements of both models are running on 2026-11-15; this section gets their numbers when the runs end.
+Measured on 2026-11-15 with the 44 test texts and the loop of the Results section; source: `eval/results/summary.json`.
+
+- **pk-lora** lifts Qwen3.5-0.8B from M = 52.3 % to 84.1 % and the clean first answers from 40.9 % to 77.3 %, with a 26-token prompt instead of 586 tokens. Without the adapter the small model mostly copies the input (24 of 44 answers); with the adapter it rewrites (1 copy), so its chrF drops from 50.44 to 41.96, the level of qwen3.5:4b (42.24). The adapter took 13.2 minutes of CPU training on 47 sentences of legal acts.
+- **pk-qwen** reaches the same M as qwen3.5:4b with the prompt sent by the client (93.2 %), with different answers: Ollama gave other samples for the same prompt and seed in a second run, so 1 run per model measures 1 sample per text (the difference after call 1, 81.8 % against 77.3 %, is 2 texts).
+- Ollama 0.34.1 refuses LoRA adapters (`Error: LoRA adapters are no longer supported`), so pk-lora runs through `transformers`; the speeds of the two backends are not comparable.
 
 ## Run locally
 
