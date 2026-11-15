@@ -73,7 +73,7 @@ def main():
     total = sum(p.numel() for p in model.parameters())
     log = open(HERE / "train_log.jsonl", "a", encoding="utf-8")
     meta = {"examples": len(data), "tokens": sum(len(x) for x, _ in data), "targets": targets,
-            "trainable": trainable, "total": total, **vars(args)}
+            "trainable": trainable, "total": total, **vars(args), "base": args.base.replace(str(Path.home()), "~")}
     print(json.dumps(meta), flush=True)
     log.write(json.dumps({"start": time.strftime("%Y-%m-%d %H:%M:%S"), **meta}) + "\n")
     opt = torch.optim.AdamW([p for p in model.parameters() if p.requires_grad], lr=args.lr, weight_decay=0.0)
