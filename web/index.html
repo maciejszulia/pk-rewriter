@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>pk-rewriter</title>
+<style>
+  :root { color-scheme: light dark; --bg: #fcfcfb; --fg: #0b0b0b; --muted: #52514e; --line: #858480; --accent: #1f5fae; --bad: #b42318; --good: #067647; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #1a1a19; --fg: #f0efec; --muted: #c3c2b7; --line: #75746e; --accent: #8fb8f0; --bad: #f97066; --good: #47cd89; }
+  }
+  body { margin: 0 auto; max-width: 52rem; padding: 1.5rem; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, sans-serif; }
+  label { display: block; font-weight: 600; margin: 1rem 0 0.25rem; }
+  textarea, select { width: 100%; box-sizing: border-box; font: inherit; color: inherit; background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 0.5rem; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  button { margin: 1rem 0.5rem 0 0; font: inherit; padding: 0.5rem 1rem; border-radius: 6px; border: 1px solid var(--accent); background: var(--accent); color: var(--bg); cursor: pointer; }
+  button.secondary { background: transparent; color: var(--accent); }
+  button:disabled { opacity: 0.6; cursor: wait; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  .muted { color: var(--muted); }
+  .ok { color: var(--good); } .fail { color: var(--bad); }
+  #output { white-space: pre-wrap; border-left: 4px solid var(--accent); padding: 0.5rem 1rem; margin: 0.5rem 0; }
+  table { border-collapse: collapse; width: 100%; } th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 0.25rem 0.5rem; vertical-align: top; }
+</style>
+</head>
+<body>
+<h1>pk-rewriter</h1>
+<p class="muted">A local Qwen model rewrites Polish text into Controlled Polish (PK). The pklint linter checks every result; the model gets up to 2 repair rounds.</p>
+<form id="form">
+  <label for="text">Polish text (1 to 2000 characters)</label>
+  <textarea id="text" name="text" rows="5" maxlength="2000" required lang="pl"></textarea>
+  <div class="row">
+    <div><label for="model">Model</label><select id="model" name="model"></select></div>
+    <div><label for="rounds">Model calls (at most)</label>
+      <select id="rounds" name="rounds"><option>1</option><option>2</option><option selected>3</option></select></div>
+  </div>
+  <button type="submit" id="rewrite">Rewrite into PK</button>
+  <button type="button" id="lint" class="secondary">Check only</button>
+</form>
+<section id="result" aria-live="polite"></section>
+<script>
+const $ = (id) => document.getElementById(id);
+const el = (tag, text, cls) => { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; };
+
+function violationList(items) {
+  if (!items.length) return el("p", "pklint: 0 violations.", "ok");
+  const ul = el("ul");
+  for (const v of items) {
+    const li = el("li"), q = el("q", v.sentence);
+    q.lang = "pl";
+    li.append(el("strong", v.code + " "), v.what + ": ", q);
+    ul.append(li);
+  }
+  return ul;
+}
+
+function show(nodes) { $("result").replaceChildren(...nodes); }
+
+async function call(path, body) {
+  const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await r.json();
+  if (!r.ok) throw new Error(typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail));
+  return data;
+}
+
+async function run(path) {
+  const text = $("text").value.trim();
+  if (!text) { show([el("p", "Enter a Polish text.", "fail")]); $("text").focus(); return; }
+  for (const b of document.querySelectorAll("button")) b.disabled = true;
+  show([el("p", path === "/rewrite" ? "Rewriting. A CPU needs from seconds to minutes per model call." : "Checking.", "muted")]);
+  try {
+    if (path === "/lint") {
+      const d = await call("/lint", { text });
+      show([el("h2", "pklint"), el("p", `${d.sentences} sentences, ${d.words} words.`, "muted"), violationList(d.violations)]);
+    } else {
+      const d = await call("/rewrite", { text, model: $("model").value, rounds: Number($("rounds").value) });
+      const out = el("p", d.text || "(empty)"); out.id = "output"; out.lang = "pl";
+      const status = el("p", d.ok ? `Passed every check after ${d.rounds} model call(s).` : `Not clean after ${d.rounds} model call(s); best round shown.`, d.ok ? "ok" : "fail");
+      const table = el("table");
+      table.append(el("caption", "Rounds", "muted"));
+      const head = el("tr"); for (const h of ["Call", "Violations", "Missing numbers", "Tokens out", "Seconds"]) head.append(el("th", h));
+      table.append(head);
+      d.history.forEach((h, i) => {
+        const tr = el("tr");
+        for (const c of [i + 1, h.violations.map((v) => v.code).join(", ") || "0", h.missing_numbers.join("; ") || "–", h.eval_count, h.eval_seconds.toFixed(1)]) tr.append(el("td", String(c)));
+        table.append(tr);
+      });
+      const last = d.history.find((h) => h.text === d.text) || d.history[d.history.length - 1];
+      show([el("h2", "Result in PK"), status, out, violationList(last.violations), table]);
+    }
+  } catch (e) {
+    show([el("p", "Error: " + e.message, "fail")]);
+  } finally {
+    for (const b of document.querySelectorAll("button")) b.disabled = false;
+  }
+}
+
+$("form").addEventListener("submit", (e) => { e.preventDefault(); run("/rewrite"); });
+$("lint").addEventListener("click", () => run("/lint"));
+
+fetch("/health").then((r) => r.json()).then((h) => {
+  for (const m of h.models) $("model").append(el("option", m));
+  if (!h.ollama) show([el("p", "Ollama does not answer; only “Check only” works.", "fail")]);
+  const q = new URLSearchParams(location.search);
+  if (q.get("model")) $("model").value = q.get("model");
+  if (q.get("text")) { $("text").value = q.get("text"); run(q.get("lint") ? "/lint" : "/rewrite"); }
+});
+</script>
+</body>
+</html>
