@@ -19,6 +19,7 @@
   :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   .muted { color: var(--muted); }
   .ok { color: var(--good); } .fail { color: var(--bad); }
+  q:lang(pl) { quotes: "„" "”"; }
   #output { white-space: pre-wrap; border-left: 4px solid var(--accent); padding: 0.5rem 1rem; margin: 0.5rem 0; }
   table { border-collapse: collapse; width: 100%; } th, td { text-align: left; border-bottom: 1px solid var(--line); padding: 0.25rem 0.5rem; vertical-align: top; }
 </style>
@@ -71,7 +72,7 @@ async function run(path) {
   try {
     if (path === "/lint") {
       const d = await call("/lint", { text });
-      show([el("h2", "pklint"), el("p", `${d.sentences} sentences, ${d.words} words.`, "muted"), violationList(d.violations)]);
+      show([el("h2", "pklint"), el("p", `Sentences: ${d.sentences}. Words: ${d.words}.`, "muted"), violationList(d.violations)]);
     } else {
       const d = await call("/rewrite", { text, model: $("model").value, rounds: Number($("rounds").value) });
       const out = el("p", d.text || "(empty)"); out.id = "output"; out.lang = "pl";
