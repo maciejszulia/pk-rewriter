@@ -147,6 +147,7 @@ def summarize():
             "tok_per_sec": round(sum(r["eval_count"] for r in rounds) / max(sum(r["eval_seconds"] for r in rounds), 1e-9), 1),
             "pklint_clean_first_pct": pct([not rec["history"][0]["violations"] for rec in recs]),
             "pklint_clean_loop_pct": pct([not rw.violations(rec["text"]) for rec in recs]),
+            "chrf_source_loop": mean([chrf(rec["text"], rec["nat"]) for rec in recs]),
         })
     rows[1:] = sorted(rows[1:], key=lambda r: size_key(r["model"]))
     (RESULTS / "summary.json").write_text(json.dumps(rows, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
