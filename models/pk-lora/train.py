@@ -5,7 +5,7 @@ source >= 35) and do not copy the placeholder pattern of the system prompt ("Je≈
 Chat: short PK system prompt, user = legal sentence, assistant = PK rewrite of qwen3.5:4b.
 The loss covers the answer tokens only.
 
-Usage: python models/pk-lora/train.py BASE_DIR [--epochs 2] [--rank 16] [--lr 2e-4]
+Usage: python models/pk-lora/train.py BASE_DIR [--epochs 3] [--rank 16] [--lr 2e-4] [--accum 4]
 Writes models/pk-lora/adapter/ (after every epoch) and models/pk-lora/train_log.jsonl.
 """
 
@@ -55,10 +55,10 @@ def encode(tok, source, answer):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("base")
-    ap.add_argument("--epochs", type=int, default=2)
+    ap.add_argument("--epochs", type=int, default=3)
     ap.add_argument("--rank", type=int, default=16)
     ap.add_argument("--lr", type=float, default=2e-4)
-    ap.add_argument("--accum", type=int, default=8)
+    ap.add_argument("--accum", type=int, default=4)
     args = ap.parse_args()
     torch.manual_seed(42)
     torch.set_num_threads(4)

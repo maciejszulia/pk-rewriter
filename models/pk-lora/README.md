@@ -28,7 +28,7 @@ The text model is loaded with `AutoModelForCausalLM` (`Qwen3_5ForCausalLM`, `tra
 2. **LoRA on the CPU** (`train.py`). Plain PyTorch loop in float32, AdamW, loss on the answer tokens only, short system prompt: „Przepisz polski tekst na Polszczyznę Kontrolowaną (PK). Odpowiedz tylko tekstem w PK.”
 3. **Evaluation before and after** (`eval_hf.py`). The base model and the base model with the adapter run through `transformers` with the same short prompt, the same 44 test texts, the same repair loop and the same metrics as `eval/run_eval.py`.
 
-LoRA settings: rank 16, alpha 32, dropout 0.05, target modules `q_proj`, `k_proj`, `v_proj`, `o_proj`, `in_proj_qkv`, `in_proj_z`, `out_proj`, `gate_proj`, `up_proj`, `down_proj`; the gate projections `in_proj_a` and `in_proj_b` (16 outputs) are left out. AdamW, learning rate 2e-4, gradient accumulation over 8 examples, 2 epochs, 4 CPU threads, seed 42.
+LoRA settings: rank 16, alpha 32, dropout 0.05, target modules `q_proj`, `k_proj`, `v_proj`, `o_proj`, `in_proj_qkv`, `in_proj_z`, `out_proj`, `gate_proj`, `up_proj`, `down_proj`; the gate projections `in_proj_a` and `in_proj_b` (16 outputs) are left out. AdamW, learning rate 2e-4, gradient accumulation over 4 examples, 3 epochs, 4 CPU threads, seed 42.
 
 ## Data
 
