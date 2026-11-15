@@ -182,9 +182,8 @@ def chart(rows):
         vals = [r[key] for r in models]
         bars = ax.bar([i + off for i in x], vals, width=0.36, color=color, label=label, edgecolor="#fcfcfb", linewidth=2)
         ax.bar_label(bars, labels=[f"{v:g}" for v in vals], padding=2, color="#0b0b0b")
-    ax.axhline(base["clean_first_pct"], color="#52514e", linestyle="--", linewidth=1.5)
-    ax.text(len(models) - 0.5, base["clean_first_pct"] + 1.5, f"source texts: {base['clean_first_pct']:g} %",
-            ha="right", color="#52514e")
+    ax.axhline(base["clean_first_pct"], color="#52514e", linestyle="--", linewidth=1.5,
+               label=f"source text, no model: {base['clean_first_pct']:g}")
     ax.set_xticks(list(x), [r["model"] for r in models])
     ax.set_ylabel("texts with 0 violations (%)", color="#52514e")
     ax.set_ylim(0, 100)
