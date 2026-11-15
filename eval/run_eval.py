@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import csv
 import json
-import re
 import sys
 import time
 import urllib.request
@@ -120,9 +119,11 @@ def mean(xs):
     return round(sum(xs) / len(xs), 2)
 
 
-def size_key(model):
-    m = re.search(r":(\d+(?:\.\d+)?)b", model)
-    return float(m.group(1)) if m else 0.0
+ORDER = ["qwen3.5:0.8b", "qwen3.5:2b", "qwen3.5:4b", "pk-qwen", "qwen3.5-0.8b-hf-short", "pk-lora-0.8b"]
+
+
+def order_key(model):
+    return ORDER.index(model) if model in ORDER else len(ORDER)
 
 
 def summarize():
@@ -149,7 +150,7 @@ def summarize():
             "pklint_clean_loop_pct": pct([not rw.violations(rec["text"]) for rec in recs]),
             "chrf_source_loop": mean([chrf(rec["text"], rec["nat"]) for rec in recs]),
         })
-    rows[1:] = sorted(rows[1:], key=lambda r: size_key(r["model"]))
+    rows[1:] = sorted(rows[1:], key=lambda r: order_key(r["model"]))
     (RESULTS / "summary.json").write_text(json.dumps(rows, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     cols = [("model", "Model"), ("n", "Texts"), ("clean_first_pct", "0 violations after call 1 (%)"),
             ("clean_loop_pct", "0 violations after loop, M (%)"), ("mean_rounds", "Mean rounds"),
@@ -174,8 +175,12 @@ def chart(rows):
     gain = round(best["clean_loop_pct"] - best["clean_first_pct"], 1)
     title = (f"{best['model']} writes {best['clean_loop_pct']:g} % of texts with 0 violations;"
              f" the repair loop adds {gain:g} pp")
+    by_name = {r["model"]: r for r in models}
+    if {"qwen3.5-0.8b-hf-short", "pk-lora-0.8b"} <= by_name.keys():
+        title += (f"\nthe pk-lora adapter lifts Qwen3.5-0.8B from {by_name['qwen3.5-0.8b-hf-short']['clean_loop_pct']:g} %"
+                  f" to {by_name['pk-lora-0.8b']['clean_loop_pct']:g} %")
     x = range(len(models))
-    fig, ax = plt.subplots(figsize=(8, 4.5), facecolor="#fcfcfb")
+    fig, ax = plt.subplots(figsize=(10, 5), facecolor="#fcfcfb")
     ax.set_facecolor("#fcfcfb")
     for off, key, color, label in ((-0.2, "clean_first_pct", "#2a78d6", "after call 1"),
                                    (0.2, "clean_loop_pct", "#eb6834", "after repair loop (M)")):
@@ -184,7 +189,7 @@ def chart(rows):
         ax.bar_label(bars, labels=[f"{v:g}" for v in vals], padding=2, color="#0b0b0b")
     ax.axhline(base["clean_first_pct"], color="#52514e", linestyle="--", linewidth=1.5,
                label=f"source text, no model: {base['clean_first_pct']:g}")
-    ax.set_xticks(list(x), [r["model"] for r in models])
+    ax.set_xticks(list(x), [r["model"].replace("-hf-short", "\n(transformers, short prompt)") for r in models], fontsize=9)
     ax.set_ylabel("texts with 0 violations (%)", color="#52514e")
     ax.set_ylim(0, 100)
     ax.spines[["top", "right"]].set_visible(False)
