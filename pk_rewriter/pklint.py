@@ -138,6 +138,25 @@ def strip_tex(tex):
     return re.sub(r"[{}\\]", "", tex)
 
 
+LIST_ITEM = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
+
+
+def units(block):
+    """Lines of one block joined into units: a Markdown list item or a table cell starts a unit of its own."""
+    out, cur = [], []
+    for line in block.splitlines():
+        if line.lstrip().startswith("|"):
+            out += [" ".join(cur)] if cur else []
+            out += line.strip().strip("|").split("|")
+            cur = []
+        elif LIST_ITEM.match(line):
+            out += [" ".join(cur)] if cur else []
+            cur = [LIST_ITEM.sub("", line)]
+        else:
+            cur.append(line)
+    return out + ([" ".join(cur)] if cur else [])
+
+
 def sentences(text):
     """Sentences of a plain text; a dot after a known abbreviation does not end a sentence."""
     text = strip_quotes(text)
@@ -145,11 +164,12 @@ def sentences(text):
     text = re.sub(r"\b(" + abbr + r")\.", lambda m: m.group(1) + "\x00", text, flags=re.IGNORECASE)
     out = []
     for block in re.split(r"\n\s*\n", text):
-        block = " ".join(block.split())
-        for s in re.split(r"(?<=[.!?:;])\s+(?=[A-ZĄĆĘŁŃÓŚŹŻ0-9(\[])|(?<=[.!?])\s+", block):
-            s = s.replace("\x00", ".").strip()
-            if n_words(s):
-                out.append(s)
+        for unit in units(block):
+            unit = " ".join(unit.split())
+            for s in re.split(r"(?<=[.!?:;])\s+(?=[A-ZĄĆĘŁŃÓŚŹŻ0-9(\[])|(?<=[.!?])\s+", unit):
+                s = s.replace("\x00", ".").strip()
+                if n_words(s):
+                    out.append(s)
     return out
 
 
@@ -194,6 +214,11 @@ def selfcheck():
         assert not lint(s)[0], (s, lint(s)[0])
     assert len(sentences("Wyślij raport o godz. 16:00. Zamknij zawór Z1.")) == 2
     assert lint("Autor pisze: „należy zamknąć zawór”.")[0] == Counter()
+    md = "Wykonaj każdy krok w tej kolejności:\n1. Zamknij zawór Z1\n2. Otwórz zawór Z2\n   na 5 min\n- Sprawdź manometr M1"
+    assert sentences(md) == ["Wykonaj każdy krok w tej kolejności:", "Zamknij zawór Z1", "Otwórz zawór Z2 na 5 min",
+                             "Sprawdź manometr M1"], sentences(md)          # a list item is a unit of its own
+    table = "| Nr | Zadanie |\n|---|---|\n| 1 | Zamknij zawór Z1 |"
+    assert sentences(table) == ["Nr", "Zadanie", "1", "Zamknij zawór Z1"], sentences(table)  # a table cell too
     return "ok"
 
 
