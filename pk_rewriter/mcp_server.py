@@ -48,5 +48,33 @@ def pk_rule(code: str) -> dict[str, Any]:
     return {"code": code, "rule": RULE_OF[code], "what": rewrite.WHAT[code], "text": rewrite.RULES[code]}
 
 
+def selftest() -> str:
+    """The 3 tools answer through the MCP server; a stand-in replaces the Ollama model, so no network is used."""
+    import asyncio
+    from unittest import mock
+
+    def call(name: str, args: dict) -> Any:
+        return asyncio.run(server.call_tool(name, args)).structured_content
+
+    assert {t.name for t in asyncio.run(server.list_tools())} == {"pk_lint", "pk_rewrite", "pk_rule"}
+    found = call("pk_lint", {"text": "Kopie bazy należy usuwać regularnie."})["result"]
+    assert sorted(v["code"] for v in found) == ["A5", "B1"], found
+    clean = {"message": {"content": "Zamknij okno O1."}, "prompt_eval_count": 1, "eval_count": 1, "eval_duration": 1}
+    with mock.patch.object(rewrite, "chat", return_value=clean), mock.patch.object(rewrite, "MODELS", ["qwen3.5:4b"]):
+        assert call("pk_rewrite", {"text": "Zamknij okno.", "rounds": 1})["ok"] is True
+        try:
+            call("pk_rewrite", {"text": "Zamknij okno.", "model": "llama3"})
+            raise AssertionError("an unknown model was accepted")
+        except ToolError:
+            pass
+    assert call("pk_rule", {"code": "B1"})["text"] == rewrite.RULES["B1"]
+    return "ok"
+
+
 if __name__ == "__main__":
-    server.run()
+    import sys
+
+    if sys.argv[1:] == ["--selftest"]:
+        print(selftest())
+    else:
+        server.run()
