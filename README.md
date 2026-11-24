@@ -157,3 +157,7 @@ The image is published to `ghcr.io/maciejszulia/pk-rewriter` for every `v*` tag 
 ## License and author
 
 MIT, see [LICENSE](LICENSE). Author: Maciej Szulia. `pk_rewriter/pklint.py` and `data/items.csv` come from the [PK repository](https://github.com/maciejszulia/polszczyzna-kontrolowana) (commit `e5c9248`) by the same author.
+
+## Documentation
+
+[Architecture documentation](docs/architecture/README.md)
